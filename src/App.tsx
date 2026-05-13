@@ -1,5 +1,63 @@
 import { useState } from "react";
 
+// ─── TYPES ─────────────────────────────────────────────────────────────────
+interface BillingItem {
+  service: string;
+  unit: number;
+  qty: number;
+  total: number;
+}
+
+interface Attachment {
+  id: string;
+  type: string;
+  file: string;
+  date: string;
+}
+
+interface Claim {
+  name: string;
+  age: string;
+  gender: string;
+  insurance_id: string;
+  policy_number: string;
+  plan_name: string;
+  hospital_name: string;
+  doctor_name: string;
+  specialty: string;
+  provider_id: string;
+  admission_date: string;
+  discharge_date: string;
+  visit_type: string;
+  diagnosis: string;
+  diagnosis2?: string;
+  diagnosis3?: string;
+  procedures: string;
+  amount: string;
+  notes: string;
+  billing: BillingItem[];
+  attachments: Attachment[];
+  file: File | null;
+}
+
+interface Rule {
+  id: string;
+  condition: string;
+  field: string;
+  match: string;
+  action: 'reject' | 'warning';
+  message: string;
+}
+
+interface Result {
+  claim: Claim;
+  ai: any;
+  rules: { violations: Rule[]; warnings: Rule[] };
+  combined: any;
+  timestamp: string;
+  id: string;
+}
+
 // ─── REALISTIC SAMPLE CLAIM ────────────────────────────────────────────────
 const REALISTIC_CLAIM = {
   name: "Hassan Mohamed Abdel-Rahman",
@@ -126,7 +184,7 @@ const REALISTIC_CLAIM = {
 };
 
 // ─── RULES ─────────────────────────────────────────────────────────────────
-const RULES = [
+const RULES: Rule[] = [
   {
     id: "R001",
     condition: "MRI requires pre-approval",
@@ -442,7 +500,7 @@ const SAMPLE_CLAIMS = [
 ];
 
 // ─── ENGINES ───────────────────────────────────────────────────────────────
-function runAIModel(claim) {
+function runAIModel(claim: Claim) {
   let score = 18;
   const p = (claim.procedures || "").toLowerCase();
   const d = (claim.diagnosis || "").toLowerCase();
@@ -469,11 +527,11 @@ function runAIModel(claim) {
   return { score, prediction };
 }
 
-function runRulesEngine(claim) {
-  const violations = [],
-    warnings = [];
+function runRulesEngine(claim: Claim): { violations: Rule[]; warnings: Rule[] } {
+  const violations: Rule[] = [],
+    warnings: Rule[] = [];
   for (const rule of RULES) {
-    const val = (claim[rule.field] || "").toString().toLowerCase();
+    const val = (claim[rule.field as keyof Claim] || "").toString().toLowerCase();
     let hit = false;
     if (rule.match === "empty") hit = val.trim() === "";
     else if (rule.match.startsWith(">"))
@@ -484,7 +542,7 @@ function runRulesEngine(claim) {
   return { violations, warnings };
 }
 
-function combineResults(ai, rules) {
+function combineResults(ai: any, rules: { violations: Rule[]; warnings: Rule[] }) {
   let status = ai.prediction;
   if (rules.violations.length > 0) status = "Rejected";
   else if (rules.warnings.length > 0 && status === "Approved")
@@ -539,7 +597,7 @@ const C = {
   headerBg: "#1a2332",
 };
 
-const inp = {
+const inp: React.CSSProperties = {
   width: "100%",
   padding: "7px 10px",
   border: `1px solid ${C.border}`,
@@ -547,7 +605,7 @@ const inp = {
   fontSize: 12,
   color: C.text,
   outline: "none",
-  boxSizing: "border-box",
+  boxSizing: "border-box" as const,
   background: "#fff",
   fontFamily: "inherit",
 };
@@ -561,7 +619,7 @@ const lbl = {
   letterSpacing: "0.04em",
 };
 
-function Btn({ children, onClick, disabled, variant = "primary", small }) {
+function Btn({ children, onClick, disabled = false, variant = "primary", small = false }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; variant?: 'primary' | 'secondary'; small?: boolean }) {
   const s = {
     primary: { background: C.blue, color: "#fff", border: "none" },
     secondary: {
@@ -575,7 +633,7 @@ function Btn({ children, onClick, disabled, variant = "primary", small }) {
       onClick={onClick}
       disabled={disabled}
       style={{
-        ...s[variant],
+        ...s[variant as keyof typeof s],
         borderRadius: 4,
         padding: small ? "4px 10px" : "7px 16px",
         cursor: disabled ? "default" : "pointer",
@@ -594,10 +652,18 @@ function Field({
   label,
   value,
   onChange,
-  placeholder,
+  placeholder = "",
   type = "text",
-  multiline,
-  span2,
+  multiline = false,
+  span2 = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: string;
+  multiline?: boolean;
+  span2?: boolean;
 }) {
   return (
     <div style={{ gridColumn: span2 ? "span 2" : "span 1" }}>
@@ -623,7 +689,7 @@ function Field({
   );
 }
 
-function StatusChip({ status }) {
+function StatusChip({ status }: { status: string }) {
   const cfg = {
     Approved: {
       bg: C.greenLight,
@@ -644,7 +710,7 @@ function StatusChip({ status }) {
       label: "NEEDS REVIEW",
     },
   };
-  const s = cfg[status] || cfg["Needs Review"];
+  const s = cfg[status as keyof typeof cfg] || cfg["Needs Review"];
   return (
     <span
       style={{
@@ -663,7 +729,7 @@ function StatusChip({ status }) {
   );
 }
 
-function ScoreBar({ score }) {
+function ScoreBar({ score }: { score: number }) {
   const color = score < 35 ? "#16a34a" : score < 60 ? "#d97706" : "#dc2626";
   return (
     <div>
@@ -701,7 +767,7 @@ function ScoreBar({ score }) {
   );
 }
 
-function SectionHead({ title, sub }) {
+function SectionHead({ title, sub = "" }: { title: string; sub?: string }) {
   return (
     <div
       style={{
@@ -720,7 +786,7 @@ function SectionHead({ title, sub }) {
   );
 }
 
-function Card({ children, style }) {
+function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div
       style={{
@@ -737,11 +803,11 @@ function Card({ children, style }) {
 }
 
 // ─── MAIN ──────────────────────────────────────────────────────────────────
-export default function WALLE() {
+export default function App() {
   const [view, setView] = useState("login");
   const [loginData, setLoginData] = useState({ user: "", pass: "" });
   const [loginErr, setLoginErr] = useState("");
-  const [claim, setClaim] = useState({
+  const [claim, setClaim] = useState<Claim>({
     name: "",
     age: "",
     gender: "male",
@@ -765,12 +831,12 @@ export default function WALLE() {
     attachments: [],
     file: null,
   });
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<Result | null>(null);
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState<Result[]>([]);
   const [tab, setTab] = useState("submit");
 
-  const set = (k, v) => setClaim((p) => ({ ...p, [k]: v }));
+  const set = (k: keyof Claim, v: any) => setClaim((p) => ({ ...p, [k]: v }));
 
   const handleLogin = () => {
     if (
@@ -1199,13 +1265,13 @@ export default function WALLE() {
                 />
                 <Field
                   label="Secondary Diagnosis (Comorbidity)"
-                  value={claim.diagnosis2}
+                  value={claim.diagnosis2 || ""}
                   onChange={(v) => set("diagnosis2", v)}
                   placeholder="e.g. E11.9 — Type 2 Diabetes mellitus"
                 />
                 <Field
                   label="Additional Diagnosis"
-                  value={claim.diagnosis3}
+                  value={claim.diagnosis3 || ""}
                   onChange={(v) => set("diagnosis3", v)}
                   placeholder="e.g. I10 — Essential hypertension"
                 />
@@ -1450,14 +1516,14 @@ export default function WALLE() {
                     cursor: "pointer",
                     background: "#fafafa",
                   }}
-                  onClick={() => document.getElementById("fu").click()}
+                  onClick={() => (document.getElementById("fu") as HTMLInputElement)?.click()}
                 >
                   <input
                     id="fu"
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
                     style={{ display: "none" }}
-                    onChange={(e) => set("file", e.target.files[0])}
+                    onChange={(e) => set("file", (e.target as HTMLInputElement).files?.[0] || null)}
                   />
                   {claim.file ? (
                     <p style={{ margin: 0, fontSize: 12, color: C.blue }}>
@@ -1603,7 +1669,7 @@ export default function WALLE() {
                   <div>
                     Billed:{" "}
                     <strong style={{ color: C.text }}>
-                      {parseFloat(result.claim.amount || 0).toLocaleString()}{" "}
+                      {parseFloat(result.claim.amount || "0").toLocaleString()}{" "}
                       EGP
                     </strong>
                   </div>
@@ -1740,7 +1806,7 @@ export default function WALLE() {
                   <SectionHead title="Recommended Corrective Actions" />
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <tbody>
-                      {result.combined.suggestions.map((s, i) => (
+                      {result.combined.suggestions.map((s: string, i: number) => (
                         <tr
                           key={i}
                           style={{
@@ -2119,7 +2185,7 @@ export default function WALLE() {
                         </div>
                       </td>
                       <td style={{ padding: "8px 12px", color: C.text }}>
-                        {parseFloat(h.claim.amount || 0).toLocaleString()}
+                        {parseFloat(h.claim.amount || "0").toLocaleString()}
                       </td>
                       <td
                         style={{
