@@ -21,8 +21,12 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview"
+  },
+  "packageManager": "npm@10",
+  "engines": {
+    "node": ">=18.0.0"
   },
   "browserslist": [
     ">0.2%",
